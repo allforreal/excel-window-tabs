@@ -28,6 +28,11 @@ const ALIGN_MIN_INTERVAL_MS = 900;
 const ALIGN_RETRY_DELAYS = [0, 800, 1800];
 const HIDDEN_POLL_MS = 5000;
 
+// 构建时由 HtmlWebpackPlugin 注入清单版本号：面板里显示它，便于确认 webview
+// 加载的是哪一版资源（Office 内置浏览器缓存曾多次导致"改了却没生效"）。
+const APP_VERSION =
+  document.querySelector('meta[name="x-app-version"]')?.getAttribute("content")?.trim() ?? "";
+
 const elements = {
   app: document.getElementById("app") as HTMLElement,
   unsupported: document.getElementById("unsupported") as HTMLElement,
@@ -214,9 +219,10 @@ function updateStatus(): void {
   elements.realignButton.classList.toggle("hidden", !persisted.alignEnabled);
   elements.setBaseButton.classList.toggle("hidden", !persisted.alignEnabled);
   elements.displayModeButton.textContent = persisted.displayMode === "compact" ? "显示：紧凑" : "显示：完整";
-  elements.shortcutHint.textContent = isMacPlatform()
+  const hint = isMacPlatform()
     ? "⌘1–9 切换 · ↑↓ 选择 · Enter 激活"
     : "Ctrl+1–9 切换 · ↑↓ 选择 · Enter 激活";
+  elements.shortcutHint.textContent = APP_VERSION ? `${hint} · v${APP_VERSION}` : hint;
 }
 
 function applyDisplayMode(): void {
@@ -244,6 +250,12 @@ function createRow(key: string): RowRefs {
   close.className = "tab-close";
   close.textContent = "×";
   close.title = "关闭该工作簿窗口";
+
+  // 行内元素必须显式挂载：之前漏了这三行 appendChild，标签就成了空白框。
+  row.appendChild(badge);
+  row.appendChild(name);
+  row.appendChild(state);
+  row.appendChild(close);
 
   const refs: RowRefs = { row, badge, name, state, close };
 

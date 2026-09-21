@@ -1,0 +1,36 @@
+{
+  "name": "excel-window-tabs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Excel 任务窗格窗口标签：把多个工作簿窗口当作标签页切换（Mac / Windows 桌面版）",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "webpack --mode production",
+    "deploy": "gh-pages -d dist",
+    "dev-server": "webpack serve --mode development",
+    "start": "office-addin-debugging start manifest.xml",
+    "stop": "office-addin-debugging stop manifest.xml",
+    "validate": "office-addin-manifest validate manifest.xml",
+    "test": "vitest run",
+    "manifest:prod": "node scripts/make-prod-manifest.mjs",
+    "sideload": "node scripts/sideload.mjs"
+  },
+  "devDependencies": {
+    "@types/office-js": "^1.0.609",
+    "copy-webpack-plugin": "^14.0.0",
+    "gh-pages": "^6.3.0",
+    "html-webpack-plugin": "^5.6.8",
+    "office-addin-debugging": "^7.0.0",
+    "office-addin-dev-certs": "^3.0.0",
+    "office-addin-manifest": "^3.0.0",
+    "ts-loader": "^9.6.2",
+    "typescript": "^5.9.0",
+    "vitest": "^5.0.1",
+    "webpack": "^5.111.1",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.2.6"
+  }
+}

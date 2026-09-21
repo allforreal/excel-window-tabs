@@ -4,6 +4,7 @@ import {
   boundsFromWindow,
   diffWindows,
   displayName,
+  findWindowByKey,
   indexesOf,
   needsRealign,
   nextPollDelay,
@@ -11,6 +12,7 @@ import {
   sameOrder,
   sortWindows,
   uniqueLabels,
+  windowKey,
   POLL_BACKOFF_MAX_MS,
   POLL_ALIGN_UNFOCUSED_MS,
   POLL_FOCUSED_MS,
@@ -182,5 +184,33 @@ describe("normalizeDisplayMode", () => {
     expect(normalizeDisplayMode("full")).toBe("full");
     expect(normalizeDisplayMode(undefined)).toBe("full");
     expect(normalizeDisplayMode(42)).toBe("full");
+  });
+});
+
+describe("windowKey", () => {
+  it("名字唯一时直接使用文档名（不受索引变化影响）", () => {
+    const windows = [makeWindow({ index: 3, name: "A.xlsx" }), makeWindow({ index: 1, name: "B.xlsx" })];
+    expect(windowKey(windows[0], windows)).toBe("A.xlsx");
+    expect(windowKey(windows[1], windows)).toBe("B.xlsx");
+  });
+
+  it("重名时拼接索引以便区分", () => {
+    const windows = [makeWindow({ index: 2, name: "同名.xlsx" }), makeWindow({ index: 5, name: "同名.xlsx" })];
+    expect(windowKey(windows[0], windows)).toBe("同名.xlsx#2");
+    expect(windowKey(windows[1], windows)).toBe("同名.xlsx#5");
+  });
+
+  it("空名字退化为索引标识", () => {
+    const windows = [makeWindow({ index: 7, name: "  " })];
+    expect(windowKey(windows[0], windows)).toBe("#7");
+  });
+
+  it("激活导致索引变化后仍能按名字找回同一个窗口", () => {
+    const before = [makeWindow({ index: 2, name: "报告.xlsx" }), makeWindow({ index: 1, name: "汇总.xlsx" })];
+    const after = [makeWindow({ index: 1, name: "报告.xlsx" }), makeWindow({ index: 2, name: "汇总.xlsx" })];
+    const key = windowKey(before[0], before);
+    const found = findWindowByKey(after, key);
+    expect(found?.name).toBe("报告.xlsx");
+    expect(found?.index).toBe(1);
   });
 });

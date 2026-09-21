@@ -46,7 +46,29 @@ export function indexesOf(windows: WindowInfo[]): number[] {
   return sortWindows(windows).map((window) => window.index);
 }
 
-export function sameOrder(left: number[], right: number[]): boolean {
+/**
+ * 计算稳定的行标识。
+ *
+ * Excel 的 `Window.index` 是"位置索引"，活动窗口永远是 1 号，
+ * 激活/开关窗口都会让它变化，因此不能用它做身份标识；
+ * 这里优先用文档名，重名时再拼接索引。
+ */
+export function windowKey(window: WindowInfo, windows: WindowInfo[]): string {
+  const name = (window.name ?? "").trim();
+  const duplicated = windows.some(
+    (candidate) => candidate !== window && (candidate.name ?? "").trim() === name
+  );
+  if (!name) {
+    return `#${window.index}`;
+  }
+  return duplicated ? `${name}#${window.index}` : name;
+}
+
+export function findWindowByKey(windows: WindowInfo[], key: string): WindowInfo | null {
+  return windows.find((window) => windowKey(window, windows) === key) ?? null;
+}
+
+export function sameOrder(left: Array<string | number>, right: Array<string | number>): boolean {
   return left.length === right.length && left.every((value, position) => value === right[position]);
 }
 

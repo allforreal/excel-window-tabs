@@ -5,14 +5,14 @@
            xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
            xsi:type="TaskPaneApp">
   <Id>548c5029-09f7-4fc8-9807-fe1f9aac715b</Id>
-  <Version>1.0.0.7</Version>
+  <Version>1.0.0.8</Version>
   <ProviderName>Local</ProviderName>
   <DefaultLocale>zh-CN</DefaultLocale>
   <DisplayName DefaultValue="Excel 窗口标签"/>
   <Description DefaultValue="在任务窗格中以标签形式切换和管理多个 Excel 工作簿窗口。"/>
   <IconUrl DefaultValue="https://allforreal.github.io/excel-window-tabs/assets/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://allforreal.github.io/excel-window-tabs/assets/icon-80.png"/>
-  <SupportUrl DefaultValue="https://allforreal.github.io/excel-window-tabs/taskpane.html?v=1.0.0.7"/>
+  <SupportUrl DefaultValue="https://allforreal.github.io/excel-window-tabs/taskpane.html?v=1.0.0.8"/>
   <AppDomains>
     <AppDomain>https://allforreal.github.io</AppDomain>
   </AppDomains>
@@ -25,7 +25,7 @@
     </Sets>
   </Requirements>
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://allforreal.github.io/excel-window-tabs/taskpane.html?v=1.0.0.7"/>
+    <SourceLocation DefaultValue="https://allforreal.github.io/excel-window-tabs/taskpane.html?v=1.0.0.8"/>
   </DefaultSettings>
   <Permissions>ReadWriteDocument</Permissions>
 
@@ -78,8 +78,8 @@
       </bt:Images>
       <bt:Urls>
         <bt:Url id="Commands.Url" DefaultValue="https://allforreal.github.io/excel-window-tabs/commands.html"/>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://allforreal.github.io/excel-window-tabs/taskpane.html?v=1.0.0.7"/>
-        <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://allforreal.github.io/excel-window-tabs/taskpane.html?v=1.0.0.7"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://allforreal.github.io/excel-window-tabs/taskpane.html?v=1.0.0.8"/>
+        <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://allforreal.github.io/excel-window-tabs/taskpane.html?v=1.0.0.8"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="Group.Label" DefaultValue="窗口标签"/>

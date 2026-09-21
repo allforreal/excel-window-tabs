@@ -2,6 +2,13 @@ import type { Bounds, WindowInfo, WindowState } from "./logic";
 
 const BASE_PROPS = "items/index,items/name,items/windowState";
 const GEOMETRY_PROPS = ",items/left,items/top,items/width,items/height";
+const ACTIVATE_SETTLE_MS = 140;
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+}
 
 export interface WindowListResult {
   windows: WindowInfo[];
@@ -84,8 +91,10 @@ export async function getActiveWindowBounds(): Promise<Bounds | null> {
 }
 
 /**
- * 切换到目标窗口。全部窗口处于 normal 时只需 2 次 sync：
- * 读取状态 → 写几何并激活。存在最小化/最大化窗口时才多一次还原同步。
+ * 切换到目标窗口。
+ *
+ * macOS 版 Excel 的窗口几何写入只对前台窗口生效，因此这里改成
+ * “先激活、待窗口稳定后再套用对齐基准”，避免写入被激活动作覆盖。
  */
 export async function activateWindow(index: number, frame?: Bounds | null): Promise<void> {
   await Excel.run(async (context) => {
@@ -98,7 +107,7 @@ export async function activateWindow(index: number, frame?: Bounds | null): Prom
       throw new Error("窗口已不存在，请刷新后重试。");
     }
 
-    if (frame) {
+    if (String(target.windowState) !== "normal") {
       const needsRestore = windows.items.some((item) => String(item.windowState) !== "normal");
       if (needsRestore) {
         for (const item of windows.items) {
@@ -108,15 +117,36 @@ export async function activateWindow(index: number, frame?: Bounds | null): Prom
         }
         await context.sync();
       }
-
-      for (const item of windows.items) {
-        applyBounds(item, frame);
-      }
-    } else if (String(target.windowState) === "minimized") {
-      target.windowState = "normal";
     }
 
     target.activate();
+    await context.sync();
+  });
+
+  if (frame) {
+    await delay(ACTIVATE_SETTLE_MS);
+    await alignWindow(index, frame);
+  }
+}
+
+/** 把对齐基准套用到单个窗口（调用方需保证该窗口处于前台，几何写入才会生效）。 */
+export async function alignWindow(index: number, frame: Bounds): Promise<void> {
+  await Excel.run(async (context) => {
+    const windows = context.workbook.application.windows;
+    windows.load("items/index,items/windowState");
+    await context.sync();
+
+    const target = windows.items.find((item) => item.index === index);
+    if (!target) {
+      return;
+    }
+
+    if (String(target.windowState) !== "normal") {
+      target.windowState = "normal";
+      await context.sync();
+    }
+
+    applyBounds(target, frame);
     await context.sync();
   });
 }

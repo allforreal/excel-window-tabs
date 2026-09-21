@@ -2,6 +2,7 @@ import {
   alignSummary,
   boundsFromWindow,
   diffWindows,
+  needsRealign,
   nextPollDelay,
   sameOrder,
   sortWindows,
@@ -20,6 +21,8 @@ const TOAST_OK_MS = 2500;
 const TOAST_ERROR_MS = 8000;
 const QUICK_SWITCH_MAX = 9;
 const SKELETON_ROWS = 3;
+const ALIGN_DEBOUNCE_MS = 150;
+const ALIGN_MIN_INTERVAL_MS = 900;
 
 const elements = {
   app: document.getElementById("app") as HTMLElement,
@@ -62,6 +65,10 @@ let toastTimer: number | undefined;
 let activeToast: { kind: "success" | "error"; message: string } | null = null;
 let hasRendered = false;
 let lastRetry: (() => void) | null = null;
+let lastActiveIndex: number | null = null;
+let lastAlignAt = 0;
+let alignTimer: number | undefined;
+let alignTargetIndex: number | null = null;
 
 const busy = {
   creating: false,
@@ -372,7 +379,12 @@ function scheduleTick(delay?: number): void {
 
   const wait =
     delay ??
-    nextPollDelay({ visible: true, focused: document.hasFocus(), failStreak }) ??
+    nextPollDelay({
+      visible: true,
+      focused: document.hasFocus(),
+      failStreak,
+      alignEnabled: persisted.alignEnabled
+    }) ??
     0;
 
   pollTimer = window.setTimeout(() => {
@@ -382,6 +394,10 @@ function scheduleTick(delay?: number): void {
 
 async function applySnapshot(next: WindowInfo[]): Promise<void> {
   const diff = diffWindows(lastSnapshot, next);
+  const activeWindow = next.find((item) => item.isActive) ?? null;
+  const activeChanged =
+    activeWindow !== null && lastActiveIndex !== null && activeWindow.index !== lastActiveIndex;
+  const firstSnapshot = lastActiveIndex === null;
 
   windows = next;
   lastSnapshot = next;
@@ -402,13 +418,17 @@ async function applySnapshot(next: WindowInfo[]): Promise<void> {
       }
     }
     saveState(persisted);
+  }
 
-    try {
-      await api.applyFrameToAll(persisted.frame, diff.added);
-    } catch (error) {
-      reportError(error);
+  // macOS 版 Excel 的窗口几何写入只对前台窗口生效，
+  // 因此改为“谁被激活，就把基准套用到谁”，避免给后台窗口写无效几何。
+  if (persisted.alignEnabled && persisted.frame && activeWindow) {
+    if (activeChanged || firstSnapshot || needsRealign(activeWindow.geometry, persisted.frame)) {
+      scheduleAlign(activeWindow.index);
     }
   }
+
+  lastActiveIndex = activeWindow?.index ?? null;
 
   if (diff.needsRender || !hasRendered) {
     hasRendered = true;
@@ -416,6 +436,34 @@ async function applySnapshot(next: WindowInfo[]): Promise<void> {
   } else {
     updateStatus();
   }
+}
+
+function scheduleAlign(index: number): void {
+  if (!persisted.frame || !persisted.alignEnabled) {
+    return;
+  }
+
+  alignTargetIndex = index;
+  if (alignTimer !== undefined) {
+    return;
+  }
+
+  const elapsed = Date.now() - lastAlignAt;
+  const wait = Math.max(ALIGN_DEBOUNCE_MS, ALIGN_MIN_INTERVAL_MS - elapsed);
+
+  alignTimer = window.setTimeout(() => {
+    alignTimer = undefined;
+    const target = alignTargetIndex;
+    alignTargetIndex = null;
+
+    if (!persisted.frame || !persisted.alignEnabled || target === null) {
+      return;
+    }
+
+    lastAlignAt = Date.now();
+    // 自动纠正失败不打扰用户：下一次轮询会重试。
+    void api.alignWindow(target, persisted.frame).catch(() => undefined);
+  }, wait);
 }
 
 async function tick(force = false): Promise<void> {

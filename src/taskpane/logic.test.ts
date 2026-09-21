@@ -5,12 +5,14 @@ import {
   diffWindows,
   displayName,
   indexesOf,
+  needsRealign,
   nextPollDelay,
   normalizeDisplayMode,
   sameOrder,
   sortWindows,
   uniqueLabels,
   POLL_BACKOFF_MAX_MS,
+  POLL_ALIGN_UNFOCUSED_MS,
   POLL_FOCUSED_MS,
   POLL_UNFOCUSED_MS,
   type WindowInfo
@@ -145,6 +147,32 @@ describe("nextPollDelay", () => {
     expect(nextPollDelay({ visible: true, focused: true, failStreak: 1 })).toBe(POLL_FOCUSED_MS * 2);
     expect(nextPollDelay({ visible: true, focused: true, failStreak: 9 })).toBe(POLL_BACKOFF_MAX_MS);
     expect(nextPollDelay({ visible: true, focused: false, failStreak: 3 })).toBe(POLL_BACKOFF_MAX_MS);
+  });
+
+  it("对齐开启时失焦间隔更短，便于及时纠正窗口位置", () => {
+    expect(
+      nextPollDelay({ visible: true, focused: false, failStreak: 0, alignEnabled: true })
+    ).toBe(POLL_ALIGN_UNFOCUSED_MS);
+    expect(
+      nextPollDelay({ visible: true, focused: false, failStreak: 0, alignEnabled: false })
+    ).toBe(POLL_UNFOCUSED_MS);
+  });
+});
+
+describe("needsRealign", () => {
+  const frame = { left: 10, top: 20, width: 1200, height: 800 };
+
+  it("缺少几何信息时不触发纠正（例如未按需加载）", () => {
+    expect(needsRealign(undefined, frame)).toBe(false);
+  });
+
+  it("偏差在 2pt 以内视为已对齐", () => {
+    expect(needsRealign({ left: 11, top: 21, width: 1200.5, height: 799.5 }, frame)).toBe(false);
+  });
+
+  it("偏差超过 2pt 时需要纠正", () => {
+    expect(needsRealign({ left: 14, top: 20, width: 1200, height: 800 }, frame)).toBe(true);
+    expect(needsRealign({ left: 10, top: 20, width: 1100, height: 800 }, frame)).toBe(true);
   });
 });
 

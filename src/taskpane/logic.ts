@@ -26,12 +26,15 @@ export interface PollState {
   visible: boolean;
   focused: boolean;
   failStreak: number;
+  alignEnabled?: boolean;
 }
 
 export const POLL_FOCUSED_MS = 800;
 export const POLL_UNFOCUSED_MS = 3000;
+export const POLL_ALIGN_UNFOCUSED_MS = 1200;
 export const POLL_BACKOFF_MAX_MS = 5000;
 export const DEFAULT_EPSILON = 1;
+export const REALIGN_EPSILON = 2;
 
 const WINDOW_SUFFIX = /:\d+$/;
 
@@ -81,6 +84,21 @@ export function boundsEqual(left: Bounds, right: Bounds, epsilon: number = DEFAU
     Math.abs(left.width - right.width) <= epsilon &&
     Math.abs(left.height - right.height) <= epsilon
   );
+}
+
+/**
+ * 判断窗口是否需要重新套用对齐基准。
+ * 没有几何信息（未按需加载）时返回 false，避免无谓写入。
+ */
+export function needsRealign(
+  geometry: Bounds | undefined,
+  frame: Bounds,
+  epsilon: number = REALIGN_EPSILON
+): boolean {
+  if (!geometry) {
+    return false;
+  }
+  return !boundsEqual(geometry, frame, epsilon);
 }
 
 export function diffWindows(previous: WindowInfo[], next: WindowInfo[]): WindowDiff {
@@ -136,7 +154,11 @@ export function nextPollDelay(state: PollState): number | null {
     return null;
   }
 
-  const base = state.focused ? POLL_FOCUSED_MS : POLL_UNFOCUSED_MS;
+  const base = state.focused
+    ? POLL_FOCUSED_MS
+    : state.alignEnabled
+      ? POLL_ALIGN_UNFOCUSED_MS
+      : POLL_UNFOCUSED_MS;
   if (state.failStreak <= 0) {
     return base;
   }

@@ -13,8 +13,14 @@
       <button id="btn-new" type="button" title="新建工作簿">＋ 新建</button>
       <button id="btn-align" type="button" aria-pressed="false"
               title="对齐模式：把所有工作簿窗口叠放到同一位置和大小，切换时看起来像单窗口标签">对齐：关</button>
-      <button id="btn-refresh" type="button" title="立即刷新">⟳</button>
+      <button id="btn-realign" type="button" class="icon-btn hidden"
+              title="重新对齐：把对齐基准重新套用到所有窗口">⇥</button>
+      <button id="btn-setbase" type="button" class="icon-btn hidden"
+              title="以当前窗口为基准：用当前活动窗口的位置和大小作为新的对齐基准">◎</button>
+      <button id="btn-refresh" type="button" class="icon-btn" title="立即刷新">⟳</button>
     </header>
+
+    <div id="toast-area" class="toast-area" role="status" aria-live="polite"></div>
 
     <section id="tab-list" class="tab-list" role="tablist" aria-label="工作簿窗口"></section>
 
@@ -24,6 +30,11 @@
         在此工作簿中自动打开
       </label>
       <p id="status" class="status"></p>
+      <div class="footer-row">
+        <button id="btn-display-mode" type="button" class="link-btn">显示：完整</button>
+        <span class="footer-sep">·</span>
+        <span id="shortcut-hint" class="hint"></span>
+      </div>
     </footer>
   </main>
 

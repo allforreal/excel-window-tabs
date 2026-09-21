@@ -1,11 +1,15 @@
 import type { Bounds, WindowInfo, WindowState } from "./logic";
 
-const WINDOW_PROPS =
-  "items/index,items/name,items/left,items/top,items/width,items/height,items/windowState";
+const BASE_PROPS = "items/index,items/name,items/windowState";
+const GEOMETRY_PROPS = ",items/left,items/top,items/width,items/height";
 
 export interface WindowListResult {
   windows: WindowInfo[];
   activeIndex: number | null;
+}
+
+export interface ListWindowOptions {
+  withGeometry?: boolean;
 }
 
 export function isSupported(): boolean {
@@ -20,27 +24,38 @@ function normalizeWindowState(value: string): WindowState {
   return "normal";
 }
 
-export async function listWindows(): Promise<WindowListResult> {
+export async function listWindows(options?: ListWindowOptions): Promise<WindowListResult> {
+  const withGeometry = options?.withGeometry === true;
+
   return Excel.run(async (context) => {
     const application = context.workbook.application;
     const windows = application.windows;
     const activeWindow = application.activeWindow;
 
-    windows.load(WINDOW_PROPS);
+    windows.load(withGeometry ? BASE_PROPS + GEOMETRY_PROPS : BASE_PROPS);
     activeWindow.load("index");
     await context.sync();
 
     const activeIndex = activeWindow.index ?? null;
-    const items: WindowInfo[] = windows.items.map((item) => ({
-      index: item.index,
-      name: item.name,
-      left: item.left,
-      top: item.top,
-      width: item.width,
-      height: item.height,
-      windowState: normalizeWindowState(String(item.windowState)),
-      isActive: item.index === activeIndex
-    }));
+    const items: WindowInfo[] = windows.items.map((item) => {
+      const info: WindowInfo = {
+        index: item.index,
+        name: item.name,
+        windowState: normalizeWindowState(String(item.windowState)),
+        isActive: item.index === activeIndex
+      };
+
+      if (withGeometry) {
+        info.geometry = {
+          left: item.left,
+          top: item.top,
+          width: item.width,
+          height: item.height
+        };
+      }
+
+      return info;
+    });
 
     return { windows: items, activeIndex };
   });
@@ -53,16 +68,25 @@ function applyBounds(item: Excel.Window, frame: Bounds): void {
   item.height = frame.height;
 }
 
-async function findWindow(
-  context: Excel.RequestContext,
-  index: number
-): Promise<Excel.Window | undefined> {
-  const windows = context.workbook.application.windows;
-  windows.load("items/index,items/windowState");
-  await context.sync();
-  return windows.items.find((item) => item.index === index);
+export async function getActiveWindowBounds(): Promise<Bounds | null> {
+  return Excel.run(async (context) => {
+    const activeWindow = context.workbook.application.activeWindow;
+    activeWindow.load("left,top,width,height");
+    await context.sync();
+
+    return {
+      left: activeWindow.left,
+      top: activeWindow.top,
+      width: activeWindow.width,
+      height: activeWindow.height
+    };
+  });
 }
 
+/**
+ * 切换到目标窗口。全部窗口处于 normal 时只需 2 次 sync：
+ * 读取状态 → 写几何并激活。存在最小化/最大化窗口时才多一次还原同步。
+ */
 export async function activateWindow(index: number, frame?: Bounds | null): Promise<void> {
   await Excel.run(async (context) => {
     const windows = context.workbook.application.windows;
@@ -75,19 +99,21 @@ export async function activateWindow(index: number, frame?: Bounds | null): Prom
     }
 
     if (frame) {
-      for (const item of windows.items) {
-        if (String(item.windowState) !== "normal") {
-          item.windowState = "normal";
+      const needsRestore = windows.items.some((item) => String(item.windowState) !== "normal");
+      if (needsRestore) {
+        for (const item of windows.items) {
+          if (String(item.windowState) !== "normal") {
+            item.windowState = "normal";
+          }
         }
+        await context.sync();
       }
-      await context.sync();
 
       for (const item of windows.items) {
         applyBounds(item, frame);
       }
     } else if (String(target.windowState) === "minimized") {
       target.windowState = "normal";
-      await context.sync();
     }
 
     target.activate();
@@ -106,12 +132,15 @@ export async function applyFrameToAll(frame: Bounds, onlyIndexes?: number[]): Pr
         ? windows.items.filter((item) => onlyIndexes.includes(item.index))
         : windows.items;
 
-    for (const item of targets) {
-      if (String(item.windowState) !== "normal") {
-        item.windowState = "normal";
+    const needsRestore = targets.some((item) => String(item.windowState) !== "normal");
+    if (needsRestore) {
+      for (const item of targets) {
+        if (String(item.windowState) !== "normal") {
+          item.windowState = "normal";
+        }
       }
+      await context.sync();
     }
-    await context.sync();
 
     for (const item of targets) {
       applyBounds(item, frame);
@@ -131,12 +160,15 @@ export async function restoreBounds(bounds: Record<string, Bounds>): Promise<voi
       return;
     }
 
-    for (const item of restorable) {
-      if (String(item.windowState) !== "normal") {
-        item.windowState = "normal";
+    const needsRestore = restorable.some((item) => String(item.windowState) !== "normal");
+    if (needsRestore) {
+      for (const item of restorable) {
+        if (String(item.windowState) !== "normal") {
+          item.windowState = "normal";
+        }
       }
+      await context.sync();
     }
-    await context.sync();
 
     for (const item of restorable) {
       applyBounds(item, bounds[String(item.index)]);
@@ -147,10 +179,15 @@ export async function restoreBounds(bounds: Record<string, Bounds>): Promise<voi
 
 export async function closeWindow(index: number): Promise<void> {
   await Excel.run(async (context) => {
-    const target = await findWindow(context, index);
+    const windows = context.workbook.application.windows;
+    windows.load("items/index");
+    await context.sync();
+
+    const target = windows.items.find((item) => item.index === index);
     if (!target) {
       throw new Error("窗口已不存在。");
     }
+
     target.close();
     await context.sync();
   });

@@ -6,6 +6,7 @@
   --line: #e4e9f0;
   --ink: #1f2937;
   --muted: #6b7280;
+  --danger: #b91c1c;
 }
 
 * {
@@ -32,38 +33,90 @@ body {
 .toolbar {
   display: flex;
   gap: 6px;
-  padding: 8px;
+  padding: 6px 8px;
   border-bottom: 1px solid var(--line);
   background: #fff;
-  position: sticky;
-  top: 0;
-  z-index: 2;
 }
 
 .toolbar button {
   flex: 1;
-  padding: 6px 8px;
-  font-size: 12.5px;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
   font-family: inherit;
   color: var(--ink);
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 8px;
   cursor: pointer;
+  transition: background 0.12s ease, opacity 0.12s ease;
 }
 
 .toolbar button:hover {
   background: #f3f7f4;
 }
 
-#btn-refresh {
-  flex: 0 0 36px;
+.toolbar button.icon-btn {
+  flex: 0 0 32px;
+  padding: 0;
+  font-size: 13px;
+}
+
+.toolbar button.busy {
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 #btn-align.on {
   background: var(--green);
   border-color: var(--green);
   color: #fff;
+}
+
+.toast-area {
+  display: flex;
+  flex-direction: column;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 8px 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.toast.success {
+  background: var(--green-light);
+  border: 1px solid #cfe7d9;
+  color: var(--green-dark);
+}
+
+.toast.error {
+  background: #fdecec;
+  border: 1px solid #f5c2c2;
+  color: var(--danger);
+}
+
+.toast-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.toast button {
+  flex: none;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-family: inherit;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
 .tab-list {
@@ -77,13 +130,16 @@ body {
 
 .tab {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  padding: 8px 10px;
+  min-height: 36px;
+  padding: 7px 10px;
   border: 1px solid var(--line);
+  border-left: 3px solid transparent;
   border-radius: 10px;
   background: #fff;
   cursor: pointer;
+  transition: background 0.12s ease, opacity 0.15s ease, border-color 0.12s ease;
 }
 
 .tab:hover {
@@ -97,14 +153,30 @@ body {
 
 .tab.active {
   border-color: var(--green);
+  border-left-color: var(--green);
   background: var(--green-light);
   font-weight: 600;
+}
+
+.tab.pending {
+  border-left-color: var(--green);
+  background: #f2faf5;
+}
+
+.tab.leaving {
+  opacity: 0;
+}
+
+.tab.busy {
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .tab-index {
   flex: 0 0 auto;
   width: 20px;
   height: 20px;
+  margin-top: 1px;
   border-radius: 6px;
   background: #eef2f6;
   color: var(--muted);
@@ -122,32 +194,68 @@ body {
 .tab-name {
   flex: 1;
   min-width: 0;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  max-height: 4.5em;
+}
+
+.tab-list.compact .tab {
+  align-items: center;
+}
+
+.tab-list.compact .tab-name {
+  display: block;
   white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-height: none;
 }
 
 .tab-state {
   flex: 0 0 auto;
+  margin-top: 1px;
   font-size: 11px;
   color: var(--muted);
 }
 
 .tab-close {
   flex: 0 0 auto;
-  padding: 2px 5px;
   border: none;
   border-radius: 6px;
   background: transparent;
   color: var(--muted);
   font-size: 14px;
   line-height: 1;
+  padding: 2px 5px;
   cursor: pointer;
 }
 
 .tab-close:hover {
   background: #fde8e8;
-  color: #b91c1c;
+  color: var(--danger);
+}
+
+.tab.skeleton {
+  border-color: transparent;
+  background: linear-gradient(90deg, #f1f4f8 25%, #e6ebf2 37%, #f1f4f8 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+  pointer-events: none;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
 }
 
 .empty {
@@ -177,8 +285,34 @@ body {
   min-height: 16px;
 }
 
-.status.error {
-  color: #b91c1c;
+.footer-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.footer-sep {
+  color: #c3cad6;
+}
+
+.hint {
+  font-size: 11px;
+  color: #8a94a3;
+}
+
+.link-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--green);
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
 }
 
 .unsupported {

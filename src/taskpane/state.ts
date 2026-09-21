@@ -1,4 +1,4 @@
-import type { Bounds } from "./logic";
+import { normalizeDisplayMode, type Bounds, type DisplayMode } from "./logic";
 
 const STORAGE_KEY = "excel-window-tabs:v1";
 
@@ -6,13 +6,15 @@ export interface PersistedState {
   alignEnabled: boolean;
   frame: Bounds | null;
   originalBounds: Record<string, Bounds>;
+  displayMode: DisplayMode;
 }
 
 export function defaultState(): PersistedState {
   return {
     alignEnabled: false,
     frame: null,
-    originalBounds: {}
+    originalBounds: {},
+    displayMode: "full"
   };
 }
 
@@ -27,7 +29,8 @@ export function loadState(): PersistedState {
     return {
       alignEnabled: parsed.alignEnabled === true,
       frame: parsed.frame ?? null,
-      originalBounds: parsed.originalBounds ?? {}
+      originalBounds: parsed.originalBounds ?? {},
+      displayMode: normalizeDisplayMode(parsed.displayMode)
     };
   } catch {
     return defaultState();

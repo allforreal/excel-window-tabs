@@ -1,15 +1,5 @@
 export type WindowState = "maximized" | "minimized" | "normal";
-
-export interface WindowInfo {
-  index: number;
-  name: string;
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-  windowState: WindowState;
-  isActive: boolean;
-}
+export type DisplayMode = "full" | "compact";
 
 export interface Bounds {
   left: number;
@@ -18,18 +8,43 @@ export interface Bounds {
   height: number;
 }
 
+export interface WindowInfo {
+  index: number;
+  name: string;
+  windowState: WindowState;
+  isActive: boolean;
+  geometry?: Bounds;
+}
+
 export interface WindowDiff {
   added: number[];
   removed: number[];
   needsRender: boolean;
 }
 
+export interface PollState {
+  visible: boolean;
+  focused: boolean;
+  failStreak: number;
+}
+
+export const POLL_FOCUSED_MS = 800;
+export const POLL_UNFOCUSED_MS = 3000;
+export const POLL_BACKOFF_MAX_MS = 5000;
 export const DEFAULT_EPSILON = 1;
 
 const WINDOW_SUFFIX = /:\d+$/;
 
 export function sortWindows(windows: WindowInfo[]): WindowInfo[] {
   return [...windows].sort((left, right) => left.index - right.index);
+}
+
+export function indexesOf(windows: WindowInfo[]): number[] {
+  return sortWindows(windows).map((window) => window.index);
+}
+
+export function sameOrder(left: number[], right: number[]): boolean {
+  return left.length === right.length && left.every((value, position) => value === right[position]);
 }
 
 export function displayName(window: WindowInfo): string {
@@ -52,13 +67,11 @@ export function uniqueLabels(windows: WindowInfo[]): Map<number, string> {
   return labels;
 }
 
-export function boundsFromWindow(window: WindowInfo): Bounds {
-  return {
-    left: window.left,
-    top: window.top,
-    width: window.width,
-    height: window.height
-  };
+export function boundsFromWindow(window: WindowInfo): Bounds | null {
+  if (!window.geometry) {
+    return null;
+  }
+  return { ...window.geometry };
 }
 
 export function boundsEqual(left: Bounds, right: Bounds, epsilon: number = DEFAULT_EPSILON): boolean {
@@ -107,16 +120,8 @@ export function diffWindows(previous: WindowInfo[], next: WindowInfo[]): WindowD
     }
   }
 
-  if (!needsRender) {
-    const previousOrder = sortWindows(previous)
-      .map((window) => window.index)
-      .join(",");
-    const nextOrder = sortWindows(next)
-      .map((window) => window.index)
-      .join(",");
-    if (previousOrder !== nextOrder) {
-      needsRender = true;
-    }
+  if (!needsRender && !sameOrder(indexesOf(previous), indexesOf(next))) {
+    needsRender = true;
   }
 
   return {
@@ -124,6 +129,24 @@ export function diffWindows(previous: WindowInfo[], next: WindowInfo[]): WindowD
     removed: removed.sort((left, right) => left - right),
     needsRender
   };
+}
+
+export function nextPollDelay(state: PollState): number | null {
+  if (!state.visible) {
+    return null;
+  }
+
+  const base = state.focused ? POLL_FOCUSED_MS : POLL_UNFOCUSED_MS;
+  if (state.failStreak <= 0) {
+    return base;
+  }
+
+  const doubled = base * 2 ** Math.min(state.failStreak, 4);
+  return Math.min(doubled, POLL_BACKOFF_MAX_MS);
+}
+
+export function normalizeDisplayMode(value: unknown): DisplayMode {
+  return value === "compact" ? "compact" : "full";
 }
 
 export function alignSummary(windowCount: number, alignEnabled: boolean): string {

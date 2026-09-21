@@ -1,21 +1,26 @@
 import { describe, expect, it } from "vitest";
 import {
   boundsEqual,
+  boundsFromWindow,
   diffWindows,
   displayName,
+  indexesOf,
+  nextPollDelay,
+  normalizeDisplayMode,
+  sameOrder,
   sortWindows,
   uniqueLabels,
+  POLL_BACKOFF_MAX_MS,
+  POLL_FOCUSED_MS,
+  POLL_UNFOCUSED_MS,
   type WindowInfo
 } from "./logic";
 
 function makeWindow(partial: Partial<WindowInfo> & { index: number; name: string }): WindowInfo {
   return {
-    left: 0,
-    top: 0,
-    width: 1200,
-    height: 800,
     windowState: "normal",
     isActive: false,
+    geometry: { left: 0, top: 0, width: 1200, height: 800 },
     ...partial
   };
 }
@@ -56,11 +61,33 @@ describe("uniqueLabels", () => {
   });
 });
 
+describe("boundsFromWindow", () => {
+  it("有几何信息时返回副本", () => {
+    const window = makeWindow({ index: 1, name: "A" });
+    expect(boundsFromWindow(window)).toEqual({ left: 0, top: 0, width: 1200, height: 800 });
+  });
+
+  it("未加载几何信息时返回 null", () => {
+    const window: WindowInfo = { index: 1, name: "A", windowState: "normal", isActive: true };
+    expect(boundsFromWindow(window)).toBeNull();
+  });
+});
+
 describe("boundsEqual", () => {
   it("允许默认 1pt 误差", () => {
     const base = { left: 10, top: 20, width: 1200, height: 800 };
     expect(boundsEqual(base, { left: 10.6, top: 20, width: 1200.4, height: 799.5 })).toBe(true);
     expect(boundsEqual(base, { left: 12, top: 20, width: 1200, height: 800 })).toBe(false);
+  });
+});
+
+describe("indexesOf / sameOrder", () => {
+  it("按顺序输出 index 并正确比较", () => {
+    const windows = [makeWindow({ index: 5, name: "E" }), makeWindow({ index: 2, name: "B" })];
+    expect(indexesOf(windows)).toEqual([2, 5]);
+    expect(sameOrder([2, 5], [2, 5])).toBe(true);
+    expect(sameOrder([2, 5], [5, 2])).toBe(false);
+    expect(sameOrder([2], [2, 5])).toBe(false);
   });
 });
 
@@ -93,11 +120,39 @@ describe("diffWindows", () => {
 
   it("仅几何变化不触发渲染", () => {
     const before = [makeWindow({ index: 1, name: "A" })];
-    const after = [makeWindow({ index: 1, name: "A", left: 120, top: 60 })];
+    const after = [
+      makeWindow({ index: 1, name: "A", geometry: { left: 120, top: 60, width: 1200, height: 800 } })
+    ];
 
     const diff = diffWindows(before, after);
     expect(diff.needsRender).toBe(false);
     expect(diff.added).toEqual([]);
     expect(diff.removed).toEqual([]);
+  });
+});
+
+describe("nextPollDelay", () => {
+  it("隐藏时暂停轮询", () => {
+    expect(nextPollDelay({ visible: false, focused: true, failStreak: 0 })).toBeNull();
+  });
+
+  it("聚焦 800ms、失焦 3000ms", () => {
+    expect(nextPollDelay({ visible: true, focused: true, failStreak: 0 })).toBe(POLL_FOCUSED_MS);
+    expect(nextPollDelay({ visible: true, focused: false, failStreak: 0 })).toBe(POLL_UNFOCUSED_MS);
+  });
+
+  it("失败退避按倍数增长并封顶", () => {
+    expect(nextPollDelay({ visible: true, focused: true, failStreak: 1 })).toBe(POLL_FOCUSED_MS * 2);
+    expect(nextPollDelay({ visible: true, focused: true, failStreak: 9 })).toBe(POLL_BACKOFF_MAX_MS);
+    expect(nextPollDelay({ visible: true, focused: false, failStreak: 3 })).toBe(POLL_BACKOFF_MAX_MS);
+  });
+});
+
+describe("normalizeDisplayMode", () => {
+  it("只接受 compact，其它值回退为 full", () => {
+    expect(normalizeDisplayMode("compact")).toBe("compact");
+    expect(normalizeDisplayMode("full")).toBe("full");
+    expect(normalizeDisplayMode(undefined)).toBe("full");
+    expect(normalizeDisplayMode(42)).toBe("full");
   });
 });

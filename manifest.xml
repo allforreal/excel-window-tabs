@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+           xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+           xsi:type="TaskPaneApp">
+  <Id>548c5029-09f7-4fc8-9807-fe1f9aac715b</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Local</ProviderName>
+  <DefaultLocale>zh-CN</DefaultLocale>
+  <DisplayName DefaultValue="Excel 窗口标签"/>
+  <Description DefaultValue="在任务窗格中以标签形式切换和管理多个 Excel 工作簿窗口。"/>
+  <IconUrl DefaultValue="https://allforreal.github.io/excel-window-tabs/assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://allforreal.github.io/excel-window-tabs/assets/icon-80.png"/>
+  <SupportUrl DefaultValue="https://allforreal.github.io/excel-window-tabs/taskpane.html"/>
+  <AppDomains>
+    <AppDomain>https://allforreal.github.io</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Workbook"/>
+  </Hosts>
+  <Requirements>
+    <Sets DefaultMinVersion="1.1">
+      <Set Name="ExcelApi" MinVersion="1.1"/>
+    </Sets>
+  </Requirements>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://allforreal.github.io/excel-window-tabs/taskpane.html"/>
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="Workbook">
+        <DesktopFormFactor>
+          <GetStarted>
+            <Title resid="GetStarted.Title"/>
+            <Description resid="GetStarted.Description"/>
+            <LearnMoreUrl resid="GetStarted.LearnMoreUrl"/>
+          </GetStarted>
+          <FunctionFile resid="Commands.Url"/>
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="WindowTabs.Group">
+                <Label resid="Group.Label"/>
+                <Icon>
+                  <bt:Image size="16" resid="Icon.16"/>
+                  <bt:Image size="32" resid="Icon.32"/>
+                  <bt:Image size="80" resid="Icon.80"/>
+                </Icon>
+                <Control xsi:type="Button" id="WindowTabs.Button">
+                  <Label resid="Button.Label"/>
+                  <Supertip>
+                    <Title resid="Button.Label"/>
+                    <Description resid="Button.Description"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16"/>
+                    <bt:Image size="32" resid="Icon.32"/>
+                    <bt:Image size="80" resid="Icon.80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>Office.AutoShowTaskpaneWithDocument</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Url"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16" DefaultValue="https://allforreal.github.io/excel-window-tabs/assets/icon-16.png"/>
+        <bt:Image id="Icon.32" DefaultValue="https://allforreal.github.io/excel-window-tabs/assets/icon-32.png"/>
+        <bt:Image id="Icon.80" DefaultValue="https://allforreal.github.io/excel-window-tabs/assets/icon-80.png"/>
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="Commands.Url" DefaultValue="https://allforreal.github.io/excel-window-tabs/commands.html"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://allforreal.github.io/excel-window-tabs/taskpane.html"/>
+        <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://allforreal.github.io/excel-window-tabs/taskpane.html"/>
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="Group.Label" DefaultValue="窗口标签"/>
+        <bt:String id="Button.Label" DefaultValue="标签栏"/>
+        <bt:String id="GetStarted.Title" DefaultValue="Excel 窗口标签已安装"/>
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="Button.Description" DefaultValue="显示窗口标签栏，在多个工作簿窗口之间快速切换。"/>
+        <bt:String id="GetStarted.Description" DefaultValue="在“开始”选项卡点击“标签栏”按钮即可打开任务窗格。"/>
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>

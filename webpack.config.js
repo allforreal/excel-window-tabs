@@ -1,9 +1,20 @@
 const path = require("path");
+const fs = require("fs");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 
+function readManifestVersion() {
+  try {
+    const manifest = fs.readFileSync(path.resolve(__dirname, "manifest.xml"), "utf8");
+    return manifest.match(/<Version>\s*([^<]+?)\s*<\/Version>/i)?.[1] ?? "0";
+  } catch {
+    return "0";
+  }
+}
+
 module.exports = async (env, options) => {
   const isDev = options.mode === "development";
+  const version = readManifestVersion();
 
   const config = {
     devtool: isDev ? "source-map" : false,
@@ -27,12 +38,16 @@ module.exports = async (env, options) => {
       new HtmlWebpackPlugin({
         filename: "taskpane.html",
         template: "./src/taskpane/taskpane.html",
-        chunks: ["taskpane"]
+        chunks: ["taskpane"],
+        inject: false,
+        templateParameters: { version }
       }),
       new HtmlWebpackPlugin({
         filename: "commands.html",
         template: "./src/commands/commands.html",
-        chunks: ["commands"]
+        chunks: ["commands"],
+        inject: false,
+        templateParameters: { version }
       }),
       new CopyWebpackPlugin({
         patterns: [

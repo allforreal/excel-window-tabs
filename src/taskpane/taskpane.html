@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Excel 窗口标签</title>
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-  <link rel="stylesheet" href="taskpane.css" />
+  <link rel="stylesheet" href="taskpane.css?v=<%= version %>" />
 </head>
 <body>
   <main id="app">
@@ -44,5 +44,6 @@
       需要支持 ExcelApiDesktop 1.1 的桌面版 Excel（Microsoft 365 for Mac / Windows）。
     </p>
   </section>
+  <script src="taskpane.js?v=<%= version %>"></script>
 </body>
 </html>

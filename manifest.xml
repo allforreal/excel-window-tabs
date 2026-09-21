@@ -5,7 +5,7 @@
            xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
            xsi:type="TaskPaneApp">
   <Id>548c5029-09f7-4fc8-9807-fe1f9aac715b</Id>
-  <Version>1.0.0.0</Version>
+  <Version>1.0.0.2</Version>
   <ProviderName>Local</ProviderName>
   <DefaultLocale>zh-CN</DefaultLocale>
   <DisplayName DefaultValue="Excel 窗口标签"/>
@@ -60,7 +60,7 @@
                     <bt:Image size="80" resid="Icon.80"/>
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>Office.AutoShowTaskpaneWithDocument</TaskpaneId>
+                    <TaskpaneId>WindowTabsPane</TaskpaneId>
                     <SourceLocation resid="Taskpane.Url"/>
                   </Action>
                 </Control>

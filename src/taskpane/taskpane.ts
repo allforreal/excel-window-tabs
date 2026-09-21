@@ -25,6 +25,8 @@ const QUICK_SWITCH_MAX = 9;
 const SKELETON_ROWS = 3;
 const ALIGN_DEBOUNCE_MS = 150;
 const ALIGN_MIN_INTERVAL_MS = 900;
+const ALIGN_RETRY_DELAYS = [0, 800, 1800];
+const HIDDEN_POLL_MS = 5000;
 
 const elements = {
   app: document.getElementById("app") as HTMLElement,
@@ -182,6 +184,17 @@ function showUnsupported(message: string): void {
 
 function updateStatus(): void {
   const summary = alignSummary(windows.length, persisted.alignEnabled);
+  const active = windows.find((window) => window.isActive) ?? null;
+  const frameText = persisted.frame
+    ? `基准 ${Math.round(persisted.frame.width)}×${Math.round(persisted.frame.height)} @(${Math.round(
+        persisted.frame.left
+      )},${Math.round(persisted.frame.top)})`
+    : "未设置基准";
+  const activeText = active?.geometry
+    ? `活动窗口 ${Math.round(active.geometry.width)}×${Math.round(active.geometry.height)} @(${Math.round(
+        active.geometry.left
+      )},${Math.round(active.geometry.top)})`
+    : "活动窗口几何未知";
 
   if (busy.creating) {
     elements.status.textContent = "正在新建工作簿…";
@@ -195,6 +208,7 @@ function updateStatus(): void {
   elements.alignButton.textContent = persisted.alignEnabled ? "对齐：开" : "对齐：关";
   elements.alignButton.classList.toggle("on", persisted.alignEnabled);
   elements.alignButton.setAttribute("aria-pressed", String(persisted.alignEnabled));
+  elements.alignButton.title = `对齐模式：把所有工作簿窗口叠放到同一位置和大小；${frameText}；${activeText}`;
   elements.alignButton.classList.toggle("busy", busy.aligning);
   elements.newButton.classList.toggle("busy", busy.creating);
   elements.realignButton.classList.toggle("hidden", !persisted.alignEnabled);
@@ -385,19 +399,18 @@ function scheduleTick(delay?: number): void {
     pollTimer = undefined;
   }
 
-  if (document.hidden) {
-    return;
-  }
-
-  const wait =
-    delay ??
-    nextPollDelay({
-      visible: true,
-      focused: document.hasFocus(),
-      failStreak,
-      alignEnabled: persisted.alignEnabled
-    }) ??
-    0;
+  // 窗口完全被遮挡（document.hidden）时放慢到 5s，仍保持同步与自动对齐，
+  // 避免"窗格在后台就再也不纠正新窗口"。
+  const wait = document.hidden
+    ? HIDDEN_POLL_MS
+    : delay ??
+      nextPollDelay({
+        visible: true,
+        focused: document.hasFocus(),
+        failStreak,
+        alignEnabled: persisted.alignEnabled
+      }) ??
+      0;
 
   pollTimer = window.setTimeout(() => {
     void tick();
@@ -414,20 +427,41 @@ function scheduleAlign(): void {
     return;
   }
 
+  const frame = persisted.frame;
   const elapsed = Date.now() - lastAlignAt;
   const wait = Math.max(ALIGN_DEBOUNCE_MS, ALIGN_MIN_INTERVAL_MS - elapsed);
 
   alignTimer = window.setTimeout(() => {
     alignTimer = undefined;
-
-    if (!persisted.frame || !persisted.alignEnabled) {
-      return;
-    }
-
-    lastAlignAt = Date.now();
-    // 自动纠正失败不打扰用户：下一次轮询会重试。
-    void api.alignActiveWindow(persisted.frame).catch(() => undefined);
+    void runAlignAttempts(frame, 0);
   }, wait);
+}
+
+/**
+ * Excel 打开/激活窗口后可能延迟恢复窗口位置，单次写入会被覆盖，
+ * 因此连续重试几次；失败只提示一次，避免刷屏。
+ */
+async function runAlignAttempts(frame: Bounds, attempt: number): Promise<void> {
+  if (!persisted.alignEnabled || !persisted.frame) {
+    return;
+  }
+
+  lastAlignAt = Date.now();
+
+  try {
+    await api.alignActiveWindow(frame);
+  } catch (error) {
+    if (attempt === 0) {
+      showToast("error", `自动对齐失败：${errorMessageOf(error)}`);
+    }
+  }
+
+  const next = attempt + 1;
+  if (next < ALIGN_RETRY_DELAYS.length) {
+    window.setTimeout(() => {
+      void runAlignAttempts(frame, next);
+    }, ALIGN_RETRY_DELAYS[next]);
+  }
 }
 
 async function applySnapshot(next: WindowInfo[]): Promise<void> {

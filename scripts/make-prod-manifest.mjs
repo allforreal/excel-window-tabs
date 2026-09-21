@@ -31,6 +31,12 @@ output = output.replace(
   `<AppDomain>${parsed.origin}</AppDomain>`
 );
 
+// 给页面 URL 加上清单版本号，避免 Office 内置浏览器命中旧缓存导致更新不生效。
+const version = output.match(/<Version>\s*([^<]+?)\s*<\/Version>/i)?.[1];
+if (version) {
+  output = output.replace(/taskpane\.html(?!\?)/g, `taskpane.html?v=${version}`);
+}
+
 await mkdir("dist", { recursive: true });
 await writeFile(path.join("dist", "manifest.xml"), output, "utf8");
 

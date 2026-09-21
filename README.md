@@ -74,6 +74,15 @@ npm run deploy
 npm run sideload -- dist/manifest.xml
 ```
 
+6. 注册加载项（Excel 只在打开带注册信息的文档时才会生成功能区按钮）：
+
+```bash
+npm run register
+```
+
+该命令会生成一个临时工作簿并在 Excel 中打开它；看到"开始"选项卡出现**标签栏**按钮后即可关闭这个临时文档。
+每次修改 manifest 版本号后都需要重新执行第 5、6 步。
+
 ## 手动侧载（不使用 npm start）
 
 把清单复制到 Excel 的加载项目录，然后重启 Excel：

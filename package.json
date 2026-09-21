@@ -16,7 +16,8 @@
     "validate": "office-addin-manifest validate manifest.xml",
     "test": "vitest run",
     "manifest:prod": "node scripts/make-prod-manifest.mjs",
-    "sideload": "node scripts/sideload.mjs"
+    "sideload": "node scripts/sideload.mjs",
+    "register": "node scripts/register.mjs dist/manifest.xml --open"
   },
   "devDependencies": {
     "@types/office-js": "^1.0.609",

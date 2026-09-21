@@ -290,9 +290,17 @@ function updateRow(
   const rawName = (info.name ?? "").trim() || label;
   const tooltip = `${rawName}（窗口 ${info.index}）`;
 
+  // 兜底：任何一个行内元素没挂在行上（历史上漏过一次 append），这里补挂，
+  // 保证标签行永远显示序号 + 名称 + 关闭按钮，而不是一个空框。
+  for (const child of [refs.badge, refs.name, refs.state, refs.close]) {
+    if (child.parentElement !== refs.row) {
+      refs.row.appendChild(child);
+    }
+  }
+
   refs.row.dataset.key = key;
   refs.badge.textContent = String(position);
-  refs.name.textContent = label;
+  refs.name.textContent = label || rawName || "工作簿";
   refs.name.title = tooltip;
   refs.row.title = tooltip;
   refs.row.setAttribute(
